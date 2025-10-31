@@ -7,10 +7,16 @@ org 0x3456
     mov si, vert
     mov cx, vertlen
     mov dl, 29
-    mov bl, 7Ah
+    mov bl, 07h
     mov dh, 9
 print_left_border:
-    call print_string
+    push ax
+    push es
+    xor ax, ax
+    mov es, ax
+    call far [es:0x0400]
+    pop es
+    pop ax
     inc dh
     cmp dh, 14
     jl print_left_border
@@ -36,45 +42,106 @@ print_left_border:
     mov bl, 0x0E
     mov dh, 9
     mov dl, 30
-    call print_string
+    ; Clear a black rectangle behind the logo (rows 9-13, cols 30-53)
+    mov bh, 0x00    ; attribute: black on black
+    mov ch, 9
+    mov cl, 30
+    mov dh, 13
+    mov dl, 53
+    push ax
+    push es
+    xor ax, ax
+    mov es, ax
+    call far [es:0x0404]
+    pop es
+    pop ax
+    push ax
+    push es
+    xor ax, ax
+    mov es, ax
+    call far [es:0x0400]
+    pop es
+    pop ax
     add si, 26
     inc dh
-    call print_string
+    push ax
+    push es
+    xor ax, ax
+    mov es, ax
+    call far [es:0x0400]
+    pop es
+    pop ax
     add si, 26
     inc dh
-    call print_string
+    push ax
+    push es
+    xor ax, ax
+    mov es, ax
+    call far [es:0x0400]
+    pop es
+    pop ax
     add si, 26
     inc dh
-    call print_string
+    push ax
+    push es
+    xor ax, ax
+    mov es, ax
+    call far [es:0x0400]
+    pop es
+    pop ax
     add si, 26
     inc dh
-    call print_string
+    push ax
+    push es
+    xor ax, ax
+    mov es, ax
+    call far [es:0x0400]
+    pop es
+    pop ax
     pop ds
 
 	; Print top border
     mov si, topborder
     mov cx, topborderLen
-    mov bl, 7Ah
+    mov bl, 07h
     mov dh, 8
     mov dl, 29
-    call print_string
+    push ax
+    push es
+    xor ax, ax
+    mov es, ax
+    call far [es:0x0400]
+    pop es
+    pop ax
 
 	; Print bottom border
     mov si, bottomborder
     mov cx, bottomborderLen
-    mov bl, 7Ah
+    mov bl, 07h
     mov dh, 14
     mov dl, 29
-    call print_string
+    push ax
+    push es
+    xor ax, ax
+    mov es, ax
+    call far [es:0x0400]
+    pop es
+    pop ax
 
     ; Draw right vertical border
     mov si, vert
     mov cx, vertlen
     mov dl, 53
-    mov bl, 7Ah
+    mov bl, 07h
     mov dh, 9
 print_right_border:
-    call print_string
+    push ax
+    push es
+    xor ax, ax
+    mov es, ax
+    call far [es:0x0400]
+    pop es
+    pop ax
     inc dh
     cmp dh, 14
     jl print_right_border
@@ -85,7 +152,13 @@ print_right_border:
     mov bl, 25h
     mov dh, 20
     mov dl, 19
-    call print_string
+    push ax
+    push es
+    xor ax, ax
+    mov es, ax
+    call far [es:0x0400]
+    pop es
+    pop ax
 
 	; Print main message again (original behaviour)
     mov si, wmsg
@@ -93,7 +166,13 @@ print_right_border:
     mov bl, 25h
     mov dh, 20
     mov dl, 19
-    call print_string
+    push ax
+    push es
+    xor ax, ax
+    mov es, ax
+    call far [es:0x0400]
+    pop es
+    pop ax
 
     ;;;load 3rd sector to load data
     mov bx, 0x0002			;es:bx input buffer, temporary set 0x0002:3656
@@ -118,75 +197,7 @@ return_from_dateTime:
     mov [loader_return_ptr+2], ax      ; segment
     jmp far [loader_return_ptr]
 
-;;print string helper
-;;  DS:SI = text pointer, CX = length, BL = attribute, DH/DL = row/col
-print_string:
-	push ax
-	push bx
-	push cx
-	push dx
-	push si
-	push di
-	push es
 
-	mov ax, 0xb800
-	mov es, ax
-
-	call calc_offset
-
-	or cx, cx
-	jz print_string_done
-
-	cld
-print_string_loop:
-	lodsb
-	cmp al, 0x0D
-	je print_string_cr
-	cmp al, 0x0A
-	je print_string_lf
-	mov ah, bl
-	stosw
-	inc dl
-	jmp short print_string_next
-
-print_string_cr:
-	mov dl, 0
-	call calc_offset
-	jmp short print_string_next
-
-print_string_lf:
-	inc dh
-	call calc_offset
-	jmp short print_string_next
-
-print_string_next:
-	loop print_string_loop
-
-print_string_done:
-	pop es
-	pop di
-	pop si
-	pop dx
-	pop cx
-	pop bx
-	pop ax
-	ret
-
-calc_offset:
-	push ax
-	xor ax, ax
-	mov al, dh
-	mov di, ax
-	shl di, 4
-	mov ax, di
-	shl ax, 2
-	add di, ax
-	xor ax, ax
-	mov al, dl
-	add di, ax
-	shl di, 1
-	pop ax
-	ret
 
 
    

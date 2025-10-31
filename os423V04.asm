@@ -8,13 +8,22 @@ start:
 	xor ax, ax
 	mov ds, ax
 
+    ; Install VRAM interrupt vectors (int 0x70 -> print, int 0x71 -> clear)
+    call install_vram_ivts
+
 ;;cls - Clear portion of the screen
 	mov bh,7ah		;Attribute (lightgreen on black) 
 	mov ch,7		;Upper left row is seven
 	mov cl,0		;Upper left column is zero
 	mov dh,16		;Lower right row is 24
 	mov dl,79		;Lower right column is 79
-	call clear_rect
+	push ax
+	push es
+	xor ax, ax
+	mov es, ax
+	call far [es:0x0404]
+	pop es
+	pop ax
 
 ;;Create a colored box in the Top
 	mov bh,4eh		;Attribute (yellow on red background)
@@ -22,7 +31,13 @@ start:
 	mov cl,0		;Upper left column is 0
 	mov dh,6		;Lower right row is 6
 	mov dl,79		;Lower right column is 79
-	call clear_rect
+	push ax
+	push es
+	xor ax, ax
+	mov es, ax
+	call far [es:0x0404]
+	pop es
+	pop ax
 
 ;;Create a colored box in the bottom
 	mov bh,20h		;Attribute (yellow on red background)
@@ -30,7 +45,13 @@ start:
 	mov cl,0		;Upper left column is 0
 	mov dh,24		;Lower right row is 24
 	mov dl,79		;Lower right column is 79 
-	call clear_rect
+	push ax
+	push es
+	xor ax, ax
+	mov es, ax
+	call far [es:0x0404]
+	pop es
+	pop ax
 
 	
 
@@ -64,15 +85,27 @@ return_from_loader:
 	mov cl,0		;Upper left column is zero
 	mov dh,24		;Lower right row is 24
 	mov dl,79		;Lower right column is 79
-	call clear_rect
+	push ax
+	push es
+	xor ax, ax
+	mov es, ax
+	call far [es:0x0404]
+	pop es
+	pop ax
 
-	; Print main message using VRAM helper
+	; Print main message using VRAM helper (via far-call wrapper)
 	mov si, msg
 	mov cx, mlen
 	mov bl, 04h
 	mov dh, 0
 	mov dl, 0
-	call print_string
+	push ax
+	push es
+	xor ax, ax
+	mov es, ax
+	call far [es:0x0400]
+	pop es
+	pop ax
 
 	; Print trailing characters
 	mov si, msg1
@@ -80,7 +113,13 @@ return_from_loader:
 	mov bl, 04h
 	mov dh, 1
 	mov dl, 0
-	call print_string
+	push ax
+	push es
+	xor ax, ax
+	mov es, ax
+	call far [es:0x0400]
+	pop es
+	pop ax
 
 	;hang
     jmp $
@@ -88,7 +127,7 @@ return_from_loader:
 
 ;;clear rectangle helper
 ;;  BH = attribute, CH/CL = upper-left row/col, DH/DL = lower-right row/col (inclusive)
-clear_rect:
+vram_clear_rect:
 	push bp
 	push di
 	push si
@@ -151,9 +190,9 @@ clear_rect_done:
 	pop bp
 	ret
 
-;;print string helper
+;; VRAM print helper (call directly)
 ;;  DS:SI = text pointer, CX = length, BL = attribute, DH/DL = row/col
-print_string:
+vram_print_string:
 	push ax
 	push bx
 	push cx
@@ -219,6 +258,62 @@ calc_offset:
 	add di, ax
 	shl di, 1
 	pop ax
+	ret
+
+;; (INT handlers removed to save space; use far-call RETF wrappers instead)
+; Far-call wrappers for use with CALL FAR [0x0400]
+; These preserve registers and return with RETF (so they are safe when invoked with CALL FAR)
+vram_print_far_entry:
+	push ax
+	push bx
+	push cx
+	push dx
+	push si
+	push di
+	push bp
+	call vram_print_string
+	pop bp
+	pop di
+	pop si
+	pop dx
+	pop cx
+	pop bx
+	pop ax
+	retf
+
+vram_clear_far_entry:
+	push ax
+	push bx
+	push cx
+	push dx
+	push si
+	push di
+	push bp
+	call vram_clear_rect
+	pop bp
+	pop di
+	pop si
+	pop dx
+	pop cx
+	pop bx
+	pop ax
+	retf
+
+;; install_vram_ivts: set interrupt vectors for our VRAM services
+install_vram_ivts:
+	cli
+	xor ax, ax
+	mov es, ax
+	; Write far-call vectors at absolute 0000:0400 for reliable far calls
+	; layout: 0x0400: print offset (word), 0x0402: print segment (word)
+	;         0x0404: clear offset (word), 0x0406: clear segment (word)
+	push cs
+	pop ax
+	mov word [es:0x0400], vram_print_far_entry
+	mov word [es:0x0402], ax
+	mov word [es:0x0404], vram_clear_far_entry
+	mov word [es:0x0406], ax
+	sti
 	ret
 
 msg db 'Sai OS, version 1.0 (c) Sep 2025 ...',

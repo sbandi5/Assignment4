@@ -49,7 +49,13 @@ date_ok:
     mov bl, 0Ah        ; Light Green
     mov dh, 2          ; Row 2 (near top)
     mov dl, 58         ; Column 58 (right side)
-    call print_string
+    push ax
+    push es
+    xor ax, ax
+    mov es, ax
+    call far [es:0x0400]
+    pop es
+    pop ax
     
     ; Display date value
     mov si, dtfld
@@ -57,7 +63,13 @@ date_ok:
     mov bl, 0Ah        ; Light Green
     mov dh, 2          ; Row 2
     mov dl, 65         ; Column 65 (right after label)
-    call print_string
+    push ax
+    push es
+    xor ax, ax
+    mov es, ax
+    call far [es:0x0400]
+    pop es
+    pop ax
 
     ; Get current time
     mov ah,02h
@@ -81,7 +93,13 @@ time_ok:
     mov bl, 0Ah        ; Light Green
     mov dh, 3          ; Row 3 (just below date)
     mov dl, 58         ; Column 58 (right side)
-    call print_string
+    push ax
+    push es
+    xor ax, ax
+    mov es, ax
+    call far [es:0x0400]
+    pop es
+    pop ax
     
     ; Display time value
     mov si, tmfld
@@ -89,7 +107,13 @@ time_ok:
     mov bl, 0Ah        ; Light Green
     mov dh, 3          ; Row 3
     mov dl, 65         ; Column 65 (right after label)
-    call print_string
+    push ax
+    push es
+    xor ax, ax
+    mov es, ax
+    call far [es:0x0400]
+    pop es
+    pop ax
 
 
     pop bx
@@ -97,76 +121,6 @@ time_ok:
     mov [datetime_return_ptr], bx
     mov [datetime_return_ptr+2], ax
     jmp far [datetime_return_ptr]
-
-;;print string helper
-;;  DS:SI = text pointer, CX = length, BL = attribute, DH/DL = row/col
-print_string:
-    push ax
-    push bx
-    push cx
-    push dx
-    push si
-    push di
-    push es
-
-    mov ax, 0xb800
-    mov es, ax
-
-    call calc_offset
-
-    or cx, cx
-    jz print_string_done
-
-    cld
-print_string_loop:
-    lodsb
-    cmp al, 0x0D
-    je print_string_cr
-    cmp al, 0x0A
-    je print_string_lf
-    mov ah, bl
-    stosw
-    inc dl
-    jmp short print_string_next
-
-print_string_cr:
-    mov dl, 0
-    call calc_offset
-    jmp short print_string_next
-
-print_string_lf:
-    inc dh
-    call calc_offset
-    jmp short print_string_next
-
-print_string_next:
-    loop print_string_loop
-
-print_string_done:
-    pop es
-    pop di
-    pop si
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    ret
-
-calc_offset:
-    push ax
-    xor ax, ax
-    mov al, dh
-    mov di, ax
-    shl di, 4
-    mov ax, di
-    shl ax, 2
-    add di, ax
-    xor ax, ax
-    mov al, dl
-    add di, ax
-    shl di, 1
-    pop ax
-    ret
 
 ; Data section
 dlabel:    db 'Date:'
