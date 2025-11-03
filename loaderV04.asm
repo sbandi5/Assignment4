@@ -55,6 +55,10 @@ print_left_border:
     call far [es:0x0404]
     pop es
     pop ax
+    ; restore cursor position and length for logo rendering
+    mov cx, 24
+    mov dh, 9
+    mov dl, 30
     push ax
     push es
     xor ax, ax
@@ -174,7 +178,7 @@ print_right_border:
     pop es
     pop ax
 
-    ;;;load 3rd sector to load data
+    ;;;load 3rd sector to load date
     mov bx, 0x0002			;es:bx input buffer, temporary set 0x0002:3656
     mov es, bx
     mov bx, 0x3656
